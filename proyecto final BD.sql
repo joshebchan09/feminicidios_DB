@@ -39,6 +39,16 @@ CREATE TABLE hecho_feminicidio (
     FOREIGN KEY (agresor_id) REFERENCES dim_agresor(agresor_id)
 );
 
+-- TABLA DE AUDITORÍA 
+CREATE TABLE auditoria_feminicidios (
+    auditoria_id INT PRIMARY KEY AUTO_INCREMENT,
+    caso_id INT,
+    folio_fiscalia VARCHAR(50),
+    usuario VARCHAR(100),
+    fecha_movimiento DATETIME,
+    accion VARCHAR(50)
+);
+
 -- 3. VISTA 
 CREATE OR REPLACE VIEW vw_termometro_impunidad AS
 SELECT 
@@ -74,10 +84,23 @@ END $$
 
 DELIMITER ;
 
--- 5. SEMBRADO DE DATOS 
+-- 5. TRIGGERS (DISPARADORES PARA LA AUDITORÍA)
+DELIMITER $$
+
+CREATE TRIGGER tr_auditoria_insercion
+AFTER INSERT ON hecho_feminicidio
+FOR EACH ROW
+BEGIN
+    INSERT INTO auditoria_feminicidios (caso_id, folio_fiscalia, usuario, fecha_movimiento, accion)
+    VALUES (NEW.caso_id, NEW.folio_fiscalia, USER(), NOW(), 'NUEVO REGISTRO');
+END $$
+
+DELIMITER ;
+
+-- 6. SEMBRADO DE DATOS 
 INSERT INTO dim_municipio (nombre, estado, alerta_genero) VALUES ('Ecatepec', 'Edomex', 1);
 INSERT INTO dim_victima (curp, nombre_anonimo, edad_rango) VALUES ('VIVA900101HDFLRS0', 'Maria N.', '30-44');
 INSERT INTO dim_agresor (perfil_psicologico, estatus_legal) VALUES ('Sin antecedentes', 'Detenido');
 
--- 6.EL CALL
+-- 7. EL CALL
 CALL sp_upsert_caso('FOLIO-2025-001', 1, 1, 1, '2025-05-20', 'Arma blanca', 'Vivienda', 50);
